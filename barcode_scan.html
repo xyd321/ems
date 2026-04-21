@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>条码抓取识别系统</title>
+<script src="https://cdn.jsdelivr.net/npm/quagga@0.12.1/dist/quagga.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
+body{background:#f5f7fa;padding:20px;max-width:800px;margin:0 auto}
+.card{background:#fff;border-radius:16px;box-shadow:0 4px 20px rgba(0,0,0,0.06);padding:24px;margin-bottom:20px}
+.title{font-size:20px;font-weight:600;color:#1d2129;margin-bottom:16px}
+.scan-box{
+  position:relative;
+  width:100%;
+  max-width:500px;
+  margin:0 auto;
+  border-radius:12px;
+  overflow:hidden;
+}
+#video{
+  width:100%;
+  display:block;
+  aspect-ratio:4/2.5;
+  object-fit:cover;
+  background:#000;
+}
+.scan-line{
+  position:absolute;
+  left:0;
+  right:0;
+  height:3px;
+  background:#00e400;
+  box-shadow:0 0 10px #00e400,0 0 20px #00e400;
+  animation:scanLine 2s linear infinite;
+  z-index:1;
+}
+@keyframes scanLine{
+  0%{top:0}
+  100%{top:calc(100% - 3px)}
+}
+.btn{
+  padding:12px 24px;
+  border-radius:10px;
+  border:none;
+  background:#1677ff;
+  color:#fff;
+  font-size:16px;
+  cursor:pointer;
+  margin-top:16px;
+  transition:0.2s
+}
+.btn:active{transform:scale(0.98)}
+.btn.success{background:#00b42a}
+.btn.warning{background:#faad14;color:#000}
+.btn.copy{background:#722ed3}
+.btn.flip{background:#ff9500;margin-left:8px}
+.toast{
+  position:fixed;
+  top:50%;
+  left:50%;
+  transform:translate(-50%,-50%);
+  background:rgba(0,0,0,0.7);
+  color:#fff;
+  padding:12px 24px;
+  border-radius:8px;
+  z-index:999;
+  opacity:0;
+  transition:opacity 0.3s;
+  pointer-events:none;
+}
+.toast.show{opacity:1}
+#result{margin-top:12px;font-size:15px;color:#333;min-height:22px}
+.list-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.empty-tip{color:#86909c;text-align:center;padding:20px 0}
+.item{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:12px 14px;
+  border-radius:10px;
+  margin-bottom:8px;
+  border:1px solid #ebeef5;
+}
+.no{color:#86909c;width:40px}
+.code{flex:1;font-weight:500}
+.del{color:#ff4d4f;background:transparent;border:none;cursor:pointer}
+.export-bar{display:flex;gap:12px;justify-content:flex-end;margin-top:16px;flex-wrap:wrap}
+.pagination{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:6px;
+  margin:12px 0;
+  font-size:12px;
+  color:#666;
+  white-space:nowrap;
+}
+.pagination button{
+  padding:4px 8px;
+  border-radius:4px;
+  border:1px solid #ddd;
+  background:#fff;
+  cursor:pointer;
+  font-size:12px;
+}
+.pagination button:disabled{
+  opacity:0.5;
+  cursor:not-allowed;
+}
+.pagination input{
+  width:42px;
+  text-align:center;
+  padding:4px;
+  border-radius:4px;
+  border:1px solid #ddd;
+  font-size:12px;
+}
+.page-info{
+  font-size:12px;
+}
+</style>
+</head>
+<body>
+<div class="toast" id="toast"></div>
+<div class="card">
+  <div class="title">条码抓取识别</div>
+  <div class="scan-box">
+    <video id="video" autoplay playsinline></video>
+    <div class="scan-line"></div>
+  </div>
+
+  <button id="captureBtn" class="btn">点击抓取并识别条形码</button>
+  <button id="flipCameraBtn" class="btn flip">🔄 翻转摄像头</button>
+
+  <div id="result"></div>
+</div>
+<div class="card">
+  <div class="list-header">
+    <div class="title">已识别单号列表</div>
+    <div style="color:#86909c;font-size:14px" id="count"></div>
+  </div>
+  <div id="listWrap"></div>
+  <div class="pagination">
+    <button id="prevBtn">上一页</button>
+    <span class="page-info">
+      第<span id="currentPage">1</span>页/共<span id="totalPage">1</span>页
+    </span>
+    <button id="nextBtn">下一页</button>
+    跳转<input type="number" id="jumpInput" min="1">
+    <button id="goBtn">GO</button>
+  </div>
+  <div class="export-bar">
+    <button id="copyAllBtn" class="btn copy">一键复制全部</button>
+    <button id="clearAllBtn" class="btn warning">全部清除</button>
+    <button id="exportBtn" class="btn success">导出 Excel 报表</button>
+  </div>
+</div>
+
+<script>
+const video = document.getElementById('video');
+const captureBtn = document.getElementById('captureBtn');
+const flipCameraBtn = document.getElementById('flipCameraBtn');
+const result = document.getElementById('result');
+const listWrap = document.getElementById('listWrap');
+const exportBtn = document.getElementById('exportBtn');
+const clearAllBtn = document.getElementById('clearAllBtn');
+const copyAllBtn = document.getElementById('copyAllBtn');
+const count = document.getElementById('count');
+const toast = document.getElementById('toast');
+const prevBtn = document.getElementById('prevBtn');
+const nextBtn = document.getElementById('nextBtn');
+const currentPageEl = document.getElementById('currentPage');
+const totalPageEl = document.getElementById('totalPage');
+const jumpInput = document.getElementById('jumpInput');
+const goBtn = document.getElementById('goBtn');
+
+let list = JSON.parse(localStorage.getItem('barcodeList')) || [];
+const pageSize = 10;
+let currentPage = 1;
+let useFrontCamera = false;
+let isCapturing = false;
+
+function showToast(msg, duration = 1000) {
+  toast.textContent = msg;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), duration);
+}
+
+function stopCamera() {
+  if (video.srcObject) {
+    video.srcObject.getTracks().forEach(track => track.stop());
+    video.srcObject = null;
+  }
+}
+
+function startCamera() {
+  stopCamera();
+  navigator.mediaDevices.getUserMedia({
+    video: {
+      facingMode: useFrontCamera ? 'user' : 'environment',
+      width: { ideal: 1280 },
+      height: { ideal: 720 }
+    }
+  })
+  .then(stream => {
+    video.srcObject = stream;
+    video.onloadedmetadata = () => video.play();
+  })
+  .catch(err => {
+    result.textContent = "摄像头错误：" + err.message;
+    showToast("摄像头打开失败");
+  });
+}
+
+flipCameraBtn.addEventListener('click', () => {
+  useFrontCamera = !useFrontCamera;
+  startCamera();
+  showToast(useFrontCamera ? "✅ 已切换前置摄像头" : "✅ 已切换后置摄像头");
+});
+
+copyAllBtn.addEventListener('click', async () => {
+  if (!list.length) return showToast('暂无数据可复制');
+  try {
+    await navigator.clipboard.writeText(list.join('\n'));
+    showToast('✅ 全部单号已复制');
+  } catch (e) {
+    showToast('复制失败，请手动选择复制');
+  }
+});
+
+startCamera();
+
+function getTotalPage() {
+  return Math.ceil(list.length / pageSize) || 1;
+}
+
+function render() {
+  localStorage.setItem('barcodeList', JSON.stringify(list));
+  const totalPage = getTotalPage();
+  currentPage = Math.min(currentPage, totalPage);
+
+  count.textContent = `共 ${list.length} 条`;
+  currentPageEl.textContent = currentPage;
+  totalPageEl.textContent = totalPage;
+  jumpInput.max = totalPage;
+
+  const start = (currentPage - 1) * pageSize;
+  const end = start + pageSize;
+  const pageData = list.slice(start, end);
+
+  if (!list.length) {
+    listWrap.innerHTML = '<div class="empty-tip">暂无识别记录</div>';
+    return;
+  }
+
+  listWrap.innerHTML = pageData.map((item, i) => `
+    <div class="item">
+      <div class="no">${start + i + 1}</div>
+      <div class="code">${item}</div>
+      <button class="del" data-i="${start + i}">删除</button>
+    </div>
+  `).join('');
+
+  document.querySelectorAll('.del').forEach(b => {
+    b.onclick = e => {
+      list.splice(+e.target.dataset.i, 1);
+      render();
+    };
+  });
+}
+
+prevBtn.addEventListener('click', () => {
+  if (currentPage > 1) { currentPage--; render(); }
+});
+
+nextBtn.addEventListener('click', () => {
+  if (currentPage < getTotalPage()) { currentPage++; render(); }
+});
+
+goBtn.addEventListener('click', () => {
+  const target = parseInt(jumpInput.value);
+  const total = getTotalPage();
+  if (target >= 1 && target <= total) {
+    currentPage = target;
+    render();
+  } else {
+    showToast('页码超出范围');
+  }
+});
+
+captureBtn.addEventListener('click', () => {
+  if (isCapturing) return;
+  isCapturing = true;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = video.videoWidth || 640;
+  canvas.height = video.videoHeight || 480;
+  const ctx = canvas.getContext('2d');
+  try {
+    ctx.drawImage(video, 0, 0);
+  } catch (e) {
+    showToast('视频未准备好，请重试');
+    isCapturing = false;
+    return;
+  }
+
+  result.textContent = '识别中...';
+  Quagga.decodeSingle({
+    src: canvas.toDataURL('image/png'),
+    numOfWorkers: 0,
+    decoder: { readers: ['code_128_reader','ean_reader','ean_8_reader','code_39_reader','upc_reader'] }
+  }, res => {
+    isCapturing = false;
+    if (res?.codeResult?.code) {
+      const code = res.codeResult.code;
+      if (!list.includes(code)) {
+        list.push(code);
+        currentPage = getTotalPage();
+        showToast('✅ 已成功抓取单号');
+        result.textContent = `识别成功：${code}`;
+        render();
+      } else {
+        showToast('⚠️ 单号已存在');
+        result.textContent = '单号已存在';
+      }
+    } else {
+      showToast('❌ 未识别到条码，请重试');
+      result.textContent = '未识别到条码，请调整位置重试';
+    }
+  });
+});
+
+clearAllBtn.addEventListener('click', () => {
+  if (!list.length) return;
+  if (confirm('确定要清空所有记录吗？此操作不可恢复！')) {
+    list = [];
+    currentPage = 1;
+    localStorage.removeItem('barcodeList');
+    render();
+    result.textContent = '已清空所有记录';
+    showToast('🗑️ 已清空所有记录');
+  }
+});
+
+exportBtn.addEventListener('click', () => {
+  if (!list.length) return alert('无数据可导出');
+  const ws = XLSX.utils.aoa_to_sheet([
+    ['序号','快递单号'],
+    ...list.map((c, i) => [i + 1, c])
+  ]);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, '条码记录');
+  XLSX.writeFile(wb, `快递单号报表_${new Date().getTime()}.xlsx`);
+  showToast('📤 导出成功');
+});
+
+render();
+</script>
+</body>
+</html>

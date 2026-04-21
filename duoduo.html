@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>退货退款详情 - 适配iframe</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+        body {
+            background-color: #f5f5f5;
+            padding: 0;
+            margin: 0;
+        }
+        /* 固定顶部导航 */
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #fff;
+            padding: 16px;
+            position: sticky; /* 在iframe中使用sticky，顶部固定 */
+            top: 0;
+            z-index: 99;
+            border-bottom: 1px solid #eee;
+        }
+        .back-btn {
+            position: absolute;
+            left: 16px;
+            font-size: 20px;
+            color: #333;
+            text-decoration: none;
+        }
+        .header-title {
+            font-size: 17px;
+            font-weight: 500;
+            color: #333;
+        }
+        /* 进度条 */
+        .progress-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background-color: #fff;
+            padding: 10px 12px;
+            color: #999;
+            font-size: 11px;
+            white-space: nowrap;
+        }
+        .progress-step {
+            display: flex;
+            align-items: center;
+        }
+        .progress-dot {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background-color: #ccc;
+            margin-right: 4px;
+        }
+        .progress-dot.active {
+            background-color: #666;
+        }
+        /* 主内容 */
+        .content {
+            background-color: #fff;
+            padding: 14px 12px;
+            margin: 8px 0;
+        }
+        .main-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #111;
+            margin-bottom: 8px;
+            white-space: nowrap;
+        }
+        .time-tip {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 16px;
+        }
+        .time-tip span {
+            color: #e53935;
+        }
+        /* 四个选项 */
+        .return-options {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 16px;
+            gap: 8px;
+        }
+        .option-card {
+            flex: 1;
+            border: 1px solid #eee;
+            border-radius: 8px;
+            padding: 10px 6px;
+            text-align: center;
+            position: relative;
+            background-color: #fff;
+        }
+        .option-card.selected {
+            border-color: #e53935;
+            background-color: #fff5f5;
+        }
+        .official-tag {
+            position: absolute;
+            top: -8px;
+            left: 6px;
+            background-color: #e53935;
+            color: #fff;
+            font-size: 11px;
+            padding: 2px 4px;
+            border-radius: 4px;
+        }
+        .option-icon {
+            font-size: 24px;
+            margin-bottom: 4px;
+            color: #333;
+        }
+        .option-text {
+            font-size: 12px;
+            color: #333;
+        }
+        .option-text-small {
+            font-size: 10px;
+            color: #999;
+            margin-top: 2px;
+        }
+        /* 提示 */
+        .tips {
+            margin-bottom: 16px;
+            line-height: 1.6;
+            font-size: 14px;
+            color: #333;
+        }
+        .tips .red-tag {
+            background-color: #e53935;
+            color: #fff;
+            padding: 2px 4px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        /* 地址区域 */
+        .address-section {
+            background-color: #f5f5f5;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 16px;
+            transition: background-color 0.2s;
+        }
+        .address-section.edit-active {
+            background-color: #ffffff;
+            border: 1px solid #ddd;
+        }
+        .address-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+        .address-label {
+            font-size: 14px;
+            color: #333;
+        }
+        .opt-btn {
+            color: #2196f3;
+            font-size: 14px;
+            cursor: pointer;
+            border: none;
+            background: none;
+        }
+        .input-name {
+            width: 100%;
+            border: none;
+            background-color: transparent;
+            font-size: 14px;
+            color: #333;
+            outline: none;
+            line-height: 1.5;
+            margin-bottom: 8px;
+        }
+        .input-address {
+            width: 100%;
+            border: none;
+            background-color: transparent;
+            font-size: 14px;
+            color: #333;
+            outline: none;
+            line-height: 1.5;
+            min-height: 40px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            text-align: left;
+        }
+        /* 问题 */
+        .problem-section {
+            background-color: #fff;
+            padding: 12px;
+            border-top: 1px solid #eee;
+            border-bottom: 1px solid #eee;
+            margin-bottom: 8px;
+        }
+        .problem-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 15px;
+            color: #333;
+        }
+        .view-all {
+            color: #999;
+            font-size: 14px;
+        }
+        .problem-list {
+            color: #999;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        /* 须知 */
+        .notice-section {
+            background-color: #fff;
+            padding: 12px;
+            margin-bottom: 10px; /* 减少底部间距，适配iframe */
+        }
+        .notice-title {
+            font-size: 16px;
+            color: #333;
+            margin-bottom: 6px;
+        }
+        .notice-text {
+            color: #999;
+            font-size: 14px;
+        }
+        /* 底部按钮 */
+        .bottom-bar {
+            background-color: #fff;
+            padding: 10px 12px;
+            border-top: 1px solid #eee;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            position: sticky; /* 在iframe中底部固定 */
+            bottom: 0;
+            z-index: 99;
+        }
+        .revoke-btn {
+            color: #666;
+            font-size: 14px;
+            text-align: center;
+        }
+        .submit-btn {
+            flex: 1;
+            background-color: #e53935;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 10px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+<!-- 固定顶部导航 -->
+<div class="header">
+    <a href="#" class="back-btn">&lt;</a>
+    <div class="header-title">退货退款详情</div>
+</div>
+
+<!-- 进度条 -->
+<div class="progress-bar">
+    <div class="progress-step">
+        <div class="progress-dot active"></div>
+        <span>商家处理</span>
+    </div>
+    <span>-----</span>
+    <span>寄回商品</span>
+    <span>-----</span>
+    <span>商家收货</span>
+    <span>-----</span>
+    <span>退款成功</span>
+</div>
+
+<!-- 内容 -->
+<div class="content">
+    <h1 class="main-title">请选择退货方式，退回商品</h1>
+    <p class="time-tip">请在<span>6天23小时</span>内填写快递单号</p>
+
+    <div class="return-options">
+        <div class="option-card">
+            <div class="official-tag">官方</div>
+            <div class="option-icon">👤</div>
+            <div class="option-text">上门取件</div>
+            <div class="option-text-small">最快2小时</div>
+        </div>
+        <div class="option-card">
+            <div class="official-tag">官方</div>
+            <div class="option-icon">🏪</div>
+            <div class="option-text">去服务点</div>
+            <div class="option-text-small">随到随退</div>
+        </div>
+        <div class="option-card">
+            <div class="official-tag">官方</div>
+            <div class="option-icon">🏢</div>
+            <div class="option-text">去快递柜</div>
+            <div class="option-text-small">全天可退</div>
+        </div>
+        <div class="option-card selected">
+            <div class="option-icon">📝</div>
+            <div class="option-text">自行退回</div>
+            <div class="option-text-small">并填写单号</div>
+        </div>
+    </div>
+
+    <div class="tips">
+        <p>－ 选择 <span class="red-tag">官方</span> 退货，预计比自行退回便宜5.51元</p>
+        <p>－ 若您自行联系快递公司退回，需填写快递单号；请勿寄到付</p>
+    </div>
+
+    <div class="address-section" id="addressBox">
+        <div class="address-row">
+            <span class="address-label">商家信息</span>
+            <button class="opt-btn" id="editBtn" onclick="toggleEdit()">编辑</button>
+        </div>
+        <input type="text" class="input-name" id="namePhone" value="马先生 18356815628" disabled>
+        <textarea class="input-address" id="address" disabled>广东省广州市天河区 广东金融学院快递服务中心</textarea>
+    </div>
+</div>
+
+<div class="problem-section">
+    <div class="problem-header">
+        <span>退货遇到问题</span>
+        <span class="view-all">查看全部 ></span>
+    </div>
+    <div class="problem-list">
+        <p>问：如何寄回商品、找谁寄快递？</p>
+        <p>问：什么是退货快递单号，怎么上传？</p>
+    </div>
+</div>
+
+<div class="notice-section">
+    <div class="notice-title">退货须知</div>
+    <div class="notice-text">请确保商品不影响二次销售（质量问题除外）</div>
+</div>
+
+<div class="bottom-bar">
+    <div class="revoke-btn">撤销售后</div>
+    <button class="submit-btn">我已退回，填写快递单号</button>
+</div>
+
+<script>
+    let isEdit = false;
+    const btn = document.getElementById('editBtn');
+    const box = document.getElementById('addressBox');
+    const namePhone = document.getElementById('namePhone');
+    const address = document.getElementById('address');
+
+    function toggleEdit() {
+        if (!isEdit) {
+            isEdit = true;
+            btn.textContent = '确认';
+            box.classList.add('edit-active');
+            namePhone.disabled = false;
+            address.disabled = false;
+            namePhone.focus();
+        } else {
+            isEdit = false;
+            btn.textContent = '编辑';
+            box.classList.remove('edit-active');
+            namePhone.disabled = true;
+            address.disabled = true;
+        }
+    }
+
+    // ---------- iframe 高度自适应核心逻辑 ----------
+    // 监听窗口大小变化，自动调整高度
+    window.addEventListener('resize', () => {
+        syncIframeHeight();
+    });
+
+    // 初次加载时执行一次
+    window.addEventListener('load', () => {
+        setTimeout(syncIframeHeight, 100); // 延迟确保DOM渲染完成
+    });
+
+    // 向父页面发送高度消息
+    function syncIframeHeight() {
+        const bodyHeight = document.body.scrollHeight;
+        // 向父页面发送消息，协议为 *，你可以根据需要限制域名
+        window.parent.postMessage({
+            type: 'iframeResize',
+            height: bodyHeight
+        }, '*');
+    }
+</script>
+</body>
+</html>

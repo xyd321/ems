@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>快包管控底价</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;font-family:system-ui,sans-serif}
+body{padding:12px;background:#f7f8fa}
+.container{max-width:100%;margin:0 auto;background:#fff;border-radius:12px;padding:14px;box-shadow:0 1px 4px rgba(0,0,0,0.06)}
+h2{font-size:18px;margin-bottom:14px;color:#222}
+.red{color:red}
+.warn{color:#e53e3e;font-size:12px;margin-top:6px;font-weight:bold}
+.form-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px}
+.form-item{display:flex;flex-direction:column;gap:4px}
+.form-item label{font-size:13px;color:#555}
+input,button{padding:8px 10px;border:1px solid #ddd;border-radius:6px;font-size:14px;width:100%}
+
+/* 多选框加大左右留白，手机好滑 */
+.check-list{
+  border:1px solid #ddd;border-radius:6px;padding:10px 12px;
+  height:300px;overflow-y:auto;background:#fff;
+}
+.check-item{
+  padding:8px 6px;display:flex;align-items:center;gap:10px;
+  font-size:15px;
+}
+.check-item input{
+  width:20px;height:20px;flex-shrink:0;
+}
+
+button{background:#007bff;color:#fff;border:none;cursor:pointer}
+.btn-group{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px}
+.copy-btn{background:#28a745}
+.export-btn{background:#ff9800}
+.ok-btn{background:#009688;margin-bottom:6px}
+.clear-btn{background:#6c757d}
+.prov-btn-group{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:4px}
+.selectAll-btn{background:#17a2b8}
+.unselectAll-btn{background:#fd7e14}
+.zone-tip{background:#eef7ff;padding:10px;border-radius:6px;font-size:13px;color:#0066cc;margin-bottom:12px;line-height:1.6}
+.highlight-city{color:#00a800;font-weight:bold;background:#e6f7e6;padding:2px 4px;border-radius:3px}
+.result-tip{font-size:14px;font-weight:bold;margin-bottom:8px}
+.table-box{overflow-x:auto;border:1px solid #eee;border-radius:8px}
+table{width:100%;border-collapse:collapse;background:#fff;font-size:14px}
+th,td{padding:8px;border:1px solid #eee;text-align:center}
+th{background:#f7f8fa}
+@media(max-width:600px){.form-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="container">
+  <h2>EMS/EMS快递包裹<span class="red">管控底价</span></h2>
+  <div class="warn">⚠️ 本价格为管控底价，严禁低于此价格接单</div>
+  <div class="form-grid">
+    <div class="form-item">
+      <label>选择区号（可多选）</label>
+      <div class="check-list" id="zoneCheckList" style="height:200px;">
+        <label class="check-item"><input type="checkbox" value="一">一区</label>
+        <label class="check-item"><input type="checkbox" value="二">二区</label>
+        <label class="check-item"><input type="checkbox" value="三">三区</label>
+        <label class="check-item"><input type="checkbox" value="四">四区</label>
+        <label class="check-item"><input type="checkbox" value="五">五区</label>
+      </div>
+      <button class="clear-btn" onclick="clearAll()">清空所有选择</button>
+    </div>
+    <div class="form-item">
+      <label>省份/城市（只显示选中区）<span id="selCount" style="color:#00a800;font-size:12px"></span></label>
+      <input id="searchProv" placeholder="输入关键词实时搜索..." style="margin-bottom:4px">
+      <div class="check-list" id="provCheckList"></div>
+      <div class="prov-btn-group">
+        <button class="selectAll-btn" onclick="selectAllProvinces()">全选当前</button>
+        <button class="unselectAll-btn" onclick="unselectAllProvinces()">全不选当前</button>
+      </div>
+    </div>
+    <div class="form-item">
+      <label>重量（克）自动取整</label>
+      <input type="number" id="weight" placeholder="输入重量">
+      <button class="ok-btn" onclick="applySelected()">确定（应用多选）</button>
+      <div class="btn-group">
+        <button class="copy-btn" onclick="copyResult()">复制</button>
+        <button class="export-btn" onclick="exportExcel()">导出</button>
+      </div>
+    </div>
+  </div>
+  <div class="zone-tip" id="zoneTip">请选择区号或省份查看</div>
+  <div class="result-tip" id="resultTip"></div>
+  <div class="table-box">
+    <table id="resultTable"></table>
+  </div>
+</div>
+<script>
+const rawData = `
+一|福建省|1.35|1.40|1.45|1.50|2.00
+二|江苏省|1.50|1.50|1.60|2.80|3.50
+二|广东省|1.50|1.50|1.60|2.80|3.50
+二|安徽省|1.50|1.50|1.60|2.80|3.50
+二|浙江省|1.50|1.50|1.60|2.80|3.50
+二|江西省|1.50|1.50|1.60|2.80|3.50
+二|湖北省|1.50|1.50|1.60|2.80|3.50
+二|湖南省|1.50|1.50|1.60|2.80|3.50
+二|上海市|2.40|2.60|3.00|3.50|4.40
+二|广州市|1.90|2.10|2.50|3.00|3.90
+二|深圳市|1.90|2.10|2.50|3.00|3.90
+三|北京市|2.40|2.60|3.00|5.00|6.50
+三|河南省|1.55|1.75|1.90|3.20|5.00
+三|广西壮族自治区|1.55|1.75|1.90|3.20|5.00
+三|山东省|1.50|1.75|1.90|3.20|5.00
+三|贵州省|1.65|1.75|1.90|3.20|5.00
+三|河北省|1.55|1.75|1.90|3.20|5.00
+三|四川省|1.55|1.75|1.90|3.20|5.00
+三|山西省|1.65|1.75|1.90|3.20|5.00
+三|陕西省|1.65|1.75|1.90|3.20|5.00
+三|天津市|1.50|1.75|1.90|3.20|5.00
+三|重庆市|1.65|1.75|1.90|3.20|5.00
+三|海南省|1.65|1.70|1.90|3.20|5.00
+四|云南省|1.85|2.00|2.00|3.80|5.60
+四|甘肃省|2.00|2.50|3.00|3.80|5.60
+四|宁夏回族自治区|2.00|2.50|3.00|3.80|5.60
+四|内蒙古自治区|2.00|2.50|3.00|3.80|5.60
+四|辽宁省|1.85|2.00|3.00|3.80|5.60
+四|吉林省|1.85|2.00|3.00|3.80|5.60
+四|黑龙江省|1.85|2.00|3.00|3.80|5.60
+五|青海省|2.00|2.50|3.20|4.00|5.50
+五|新疆维吾尔自治区|15|15|15|15|15
+五|西藏自治区|16|16|16|16|16
+`;
+const weightRanges = [
+  {min:0,max:300,name:"0-300克"},
+  {min:301,max:500,name:"301-500克"},
+  {min:501,max:1000,name:"501-1000克"},
+  {min:1001,max:2000,name:"1001-2000克"},
+  {min:2001,max:3000,name:"2001-3000克"}
+];
+const priceList = [];
+let copyText = "";
+let exportData = [];
+const zoneCheckList = document.getElementById("zoneCheckList");
+const provCheckList = document.getElementById("provCheckList");
+const zoneTip = document.getElementById("zoneTip");
+const weightEl = document.getElementById("weight");
+const searchEl = document.getElementById("searchProv");
+const selCount = document.getElementById("selCount");
+
+rawData.trim().split("\n").forEach(line=>{
+  const p = line.split("|").map(i=>i.trim());
+  if(p.length >= 2) priceList.push({zone:p[0],name:p[1],prices:p.slice(2,7).map(Number)});
+});
+
+zoneCheckList.addEventListener("change", updateProvinceList);
+searchEl.addEventListener("input", updateProvinceList);
+searchEl.addEventListener("keydown", function(e){
+  if(e.key === "Enter") applySelected();
+});
+weightEl.addEventListener("keydown", function(e){
+  if(e.key === "Enter") applySelected();
+});
+
+function updateProvinceList(){
+  const selectedZones = Array.from(zoneCheckList.querySelectorAll("input:checked")).map(i=>i.value);
+  const keyword = searchEl.value.trim().toLowerCase();
+  let list = priceList;
+  if(selectedZones.length>0){
+    list = list.filter(item=>selectedZones.includes(item.zone));
+  }
+  if(keyword){
+    list = list.filter(item=>item.name.toLowerCase().includes(keyword));
+  }
+  provCheckList.innerHTML = "";
+  list.forEach(item=>{
+    const label = document.createElement("label");
+    label.className = "check-item";
+    label.innerHTML = `<input type="checkbox" value="${item.name}">${item.name}`;
+    provCheckList.appendChild(label);
+  });
+  showSelectCount();
+}
+
+function showSelectCount(){
+  const cnt = provCheckList.querySelectorAll("input:checked").length;
+  selCount.textContent = cnt ? `（已选 ${cnt} 个）` : '';
+}
+
+function selectAllProvinces(){
+  provCheckList.querySelectorAll("input").forEach(i=>i.checked=true);
+  showSelectCount();
+}
+
+function unselectAllProvinces(){
+  provCheckList.querySelectorAll("input").forEach(i=>i.checked=false);
+  showSelectCount();
+}
+
+function clearAll(){
+  zoneCheckList.querySelectorAll("input").forEach(i=>i.checked=false);
+  provCheckList.innerHTML = "";
+  searchEl.value = "";
+  weightEl.value = "";
+  selCount.textContent = "";
+  zoneTip.innerHTML = "请选择区号或省份查看";
+  document.getElementById("resultTable").innerHTML = "";
+  document.getElementById("resultTip").textContent = "";
+}
+
+function applySelected(){
+  showSelectCount();
+  updateTip();
+  search();
+}
+
+function updateTip(){
+  const selectedZones = new Set(Array.from(zoneCheckList.querySelectorAll("input:checked")).map(i=>i.value));
+  const selectedProvinces = Array.from(provCheckList.querySelectorAll("input:checked")).map(i=>i.value);
+  selectedProvinces.forEach(p=>{
+    const item = priceList.find(i=>i.name===p);
+    if(item) selectedZones.add(item.zone);
+  });
+  if(selectedZones.size===0 && selectedProvinces.length===0){
+    zoneTip.innerHTML = "请选择区号或省份查看";
+    return;
+  }
+  let allItems = [];
+  selectedZones.forEach(z=>{
+    allItems = allItems.concat(priceList.filter(i=>i.zone===z));
+  });
+  const html = allItems.map(item=>
+    selectedProvinces.includes(item.name)
+      ? `<span class="highlight-city">${item.name}</span>`
+      : item.name
+  ).join("　");
+  zoneTip.innerHTML = `<strong>${Array.from(selectedZones).join("/")}区</strong> 包含：${html}`;
+}
+
+function getRoundWeight(g){
+  if(g<=300)return 300;
+  if(g<=500)return 500;
+  if(g<=1000)return 1000;
+  if(g<=2000)return 2000;
+  if(g<=3000)return 3000;
+  return g;
+}
+
+function getRange(gram){
+  for(let r of weightRanges){
+    if(gram>=r.min && gram<=r.max)return r.name;
+  }
+  return "超出范围";
+}
+
+function getPrice(prices,gram){
+  for(let i=0;i<weightRanges.length;i++){
+    const r=weightRanges[i];
+    if(gram>=r.min && gram<=r.max)return prices[i];
+  }
+  return "超出范围";
+}
+
+// 核心修复：重量留空 = 显示所有重量
+function search(){
+  const weightVal = weightEl.value.trim();
+  const weight = weightVal ? getRoundWeight(Number(weightVal)) : null;
+
+  const selectedZones = Array.from(zoneCheckList.querySelectorAll("input:checked")).map(i=>i.value);
+  const selectedProvinces = Array.from(provCheckList.querySelectorAll("input:checked")).map(i=>i.value);
+  
+  let data = priceList;
+  if(selectedZones.length>0) data = data.filter(i=>selectedZones.includes(i.zone));
+  if(selectedProvinces.length>0) data = data.filter(i=>selectedProvinces.includes(i.name));
+  
+  copyText = "";
+  exportData = [];
+  const resultTip = document.getElementById("resultTip");
+  const table = document.getElementById("resultTable");
+  let html = "";
+
+  if(weight !== null){
+    const rangeName = getRange(weight);
+    resultTip.textContent = `重量：${weight}克（${rangeName}）`;
+    html = `<tr><th>区号</th><th>省份/城市</th><th>重量区间</th><th>价格</th></tr>`;
+    data.forEach(item=>{
+      const p = getPrice(item.prices, weight);
+      html += `<tr><td>${item.zone}</td><td>${item.name}</td><td>${rangeName}</td><td>${p}</td></tr>`;
+      copyText += `省份：${item.name}\n重量区间：${rangeName}\n价格：${p}元\n\n`;
+      exportData.push({区号:item.zone,省份:item.name,重量区间:rangeName,价格:p+"元"});
+    });
+  }else{
+    resultTip.textContent = "重量留空，显示所有重量价格";
+    html = `<tr><th>区号</th><th>省份/城市</th>`;
+    weightRanges.forEach(r=>html+=`<th>${r.name}</th>`);
+    html+=`</tr>`;
+    data.forEach(item=>{
+      html+=`<tr><td>${item.zone}</td><td>${item.name}</td>`;
+      let row = {区号:item.zone,省份:item.name};
+      item.prices.forEach((p,idx)=>{
+        html+=`<td>${p}</td>`;
+        row[weightRanges[idx].name] = p+"元";
+      });
+      html+=`</tr>`;
+      exportData.push(row);
+    });
+  }
+  table.innerHTML = html;
+}
+
+function copyResult(){
+  if(!copyText){alert("请先查询");return;}
+  navigator.clipboard.writeText(copyText.trim()).then(()=>alert("复制成功！"));
+}
+
+function exportExcel(){
+  if(exportData.length===0){alert("请先查询");return;}
+  const csv = [
+    Object.keys(exportData[0]).join(","),
+    ...exportData.map(row=>Object.values(row).join(","))
+  ].join("\n");
+  const blob = new Blob(["\ufeff"+csv],{type:"text/csv;charset=utf-8"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "EMS快包管控价.csv";
+  a.click();
+}
+
+updateProvinceList();
+</script>
+</body>
+</html>

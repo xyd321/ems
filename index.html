@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>快递业务管理系统</title>
+<style>
+*{
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: system-ui, sans-serif;
+}
+body{
+  height: 100vh;
+  overflow: hidden;
+  background: #f7f8fa;
+}
+
+/* 顶部菜单按钮 */
+.menu-toggle{
+  position: fixed;
+  top: 14px;
+  left: 14px;
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  cursor: pointer;
+  z-index: 100;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  transition: all 0.2s;
+}
+.menu-toggle:active{
+  transform: scale(0.96);
+}
+
+/* 侧边导航栏 - 美化版 */
+.sidebar{
+  width: 240px;
+  background: #ffffff;
+  border-right: 1px solid #e5e7eb;
+  height: 100vh;
+  position: fixed;
+  left: 0;
+  top: 0;
+  padding: 70px 14px 20px;
+  overflow-y: auto;
+  transform: translateX(-100%);
+  transition: transform 0.28s ease;
+  z-index: 99;
+  box-shadow: 2px 0 10px rgba(0,0,0,0.04);
+}
+.sidebar.show{
+  transform: translateX(0);
+}
+
+/* 标题 */
+.sidebar h3{
+  font-size: 16px;
+  color: #1d2129;
+  margin-bottom: 18px;
+  padding-left: 6px;
+  font-weight: 600;
+}
+
+/* 主菜单 */
+.menu-item{
+  display: block;
+  padding: 11px 12px;
+  color: #333;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background 0.2s;
+  margin-bottom: 2px;
+}
+.menu-item:hover{
+  background: #f3f4f6;
+  color: #1677ff;
+}
+
+/* 子菜单 */
+.submenu{
+  padding-left: 14px;
+  display: none;
+}
+.submenu.show{
+  display: block;
+}
+.submenu a{
+  padding: 9px 12px;
+  font-size: 13px;
+  display: block;
+  color: #4e5969;
+  text-decoration: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.submenu a:hover{
+  background: #f3f4f6;
+  color: #1677ff;
+}
+
+/* 内容区域 */
+.main{
+  width: 100%;
+  height: 100vh;
+}
+#contentFrame{
+  width: 100%;
+  height: 100%;
+  border: none;
+  background: #f7f8fa;
+}
+</style>
+</head>
+<body>
+
+<!-- 菜单按钮 -->
+<div class="menu-toggle" onclick="toggleSidebar()">
+☰
+</div>
+
+<!-- 侧边导航 -->
+<div class="sidebar" id="sidebar">
+  <h3>快递业务菜单</h3>
+
+  <div class="menu-item" onclick="toggleSub('menu1')">▶ 协议客户</div>
+  <div class="submenu" id="menu1">
+    <div class="menu-item" onclick="toggleSub('quote')">├ 报价查询</div>
+    <div class="submenu" id="quote">
+      <a onclick="loadPage('price_tekuai.html')">特快管控价</a>
+      <a onclick="loadPage('price_kuaibao.html')">快包管控价</a>
+      <a onclick="loadPage('price_dianbiao.html')">电标管控价</a>
+      <a onclick="loadPage('pr154ice_biaokuai.html')">标快管控价</a>
+    </div>
+    <a onclick="loadPage('province_time.html')">└ 省份时效查询</a>
+  </div>
+
+  <div class="menu-item" onclick="toggleSub('tools')">▶ 快递小工具</div>
+  <div class="submenu" id="tools">
+	  <a onclick="loadPage('dedupe.html')">快递单号去重+净化</a>
+    <a onclick="loadPage('duoduo.html')">多多退货页面</a>
+    <a onclick="loadPage('barcode.html')">快递条码转换(手机版)</a>
+    <a onclick="loadPage('barcode_com.html')">快递条码转换(电脑plus)</a>
+    <a onclick="loadPage('barcode_scan.html')">读取单号</a>
+  </div>
+
+  <!-- 新增：反馈信箱 -->
+  <div style="margin-top:12px;"></div>
+  <div class="menu-item" onclick="loadPage('feedback.html')">📩 反馈信箱</div>
+</div>
+
+<!-- 内容区 -->
+<div class="main" id="mainArea">
+  <iframe id="contentFrame"></iframe>
+</div>
+
+<script>
+const sidebar = document.getElementById('sidebar');
+const mainArea = document.getElementById('mainArea');
+
+// 开关侧边栏
+function toggleSidebar() {
+  sidebar.classList.toggle('show');
+}
+
+// 展开子菜单
+function toggleSub(id) {
+  document.getElementById(id).classList.toggle('show');
+}
+
+// 加载页面并关闭菜单
+function loadPage(url) {
+  document.getElementById('contentFrame').src = url;
+  sidebar.classList.remove('show');
+}
+
+// 点击内容区自动收起导航
+mainArea.addEventListener('click', () => {
+  sidebar.classList.remove('show');
+});
+
+// 默认打开
+window.onload = () => {
+  loadPage('hello.html');
+};
+</script>
+</body>
+</html>
