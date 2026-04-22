@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>快递业务管理系统 - 首页</title>
+<style>
+/* 基础重置 */
+* { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Arial', sans-serif; }
+body {
+  background: linear-gradient(135deg, #4158d0, #667eea, #8b9aff, #c471ed);
+  background-size: 300% 300%;
+  animation: gradientBG 12s ease infinite;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+@keyframes gradientBG {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+.container {
+  width: 100%;
+  max-width: 860px;
+  background: rgba(255,255,255,0.92);
+  backdrop-filter: blur(12px);
+  border-radius: 20px;
+  padding: 50px 35px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+  text-align: center;
+  border: 1px solid rgba(255,255,255,0.3);
+  position: relative;
+  overflow: hidden;
+}
+.container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 5px;
+  background: linear-gradient(90deg, #667eea, #c471ed, #4158d0);
+  animation: shine 3s linear infinite;
+}
+@keyframes shine {
+  100% { left: 100%; }
+}
+/* 左上角提示 */
+.top-tip {
+  position: absolute;
+  top: 16px;
+  left: 20px;
+  font-size: 12px;
+  color: #667eea;
+  background: rgba(255,255,255,0.8);
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-weight: bold;
+  z-index: 10;
+}
+.main-icon {
+  font-size: 70px;
+  margin-bottom: 20px;
+  color: #667eea;
+  display: inline-block;
+  animation: bounce 2.2s infinite ease-in-out;
+  filter: drop-shadow(0 4px 8px rgba(102,126,234,0.3));
+}
+@keyframes bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-12px); }
+}
+h1 {
+  font-size: 32px;
+  color: #222;
+  margin-bottom: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+.subtitle {
+  color: #555;
+  font-size: 16px;
+  margin-bottom: 40px;
+  line-height: 1.6;
+}
+.features {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 18px;
+  margin: 30px 0;
+}
+.feature-item {
+  width: 130px;
+  padding: 24px 10px;
+  background: #ffffff;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.32s ease;
+  border: 1px solid rgba(102,126,234,0.15);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+  position: relative;
+  overflow: hidden;
+}
+.feature-item::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(102,126,234,0.08), transparent);
+  opacity: 0;
+  transition: 0.3s;
+}
+.feature-item:hover {
+  transform: translateY(-8px) scale(1.03);
+  box-shadow: 0 12px 28px rgba(102,126,234,0.2);
+  border-color: #667eea;
+}
+.feature-item:hover::after {
+  opacity: 1;
+}
+.feature-icon {
+  font-size: 34px;
+  margin-bottom: 12px;
+  display: block;
+}
+/* 统一风格动画 */
+.feature-item:nth-child(1) .feature-icon { color: #ff6b6b; animation: pulse 2.1s infinite; }
+.feature-item:nth-child(2) .feature-icon { color: #4ecdc4; animation: float 2.8s infinite; }
+.feature-item:nth-child(3) .feature-icon { color: #45b7d1; animation: swing 3.2s infinite; }
+.feature-item:nth-child(4) .feature-icon { color: #667eea; animation: pulse 2.1s infinite; }
+.feature-item:nth-child(5) .feature-icon { color: #96ceb4; animation: float 2.8s infinite; }
+.feature-item:nth-child(6) .feature-icon { color: #feca57; animation: swing 3.2s infinite; }
+
+@keyframes flash { 0%,100%{opacity:1;}50%{opacity:0.5;} }
+@keyframes float { 0%,100%{transform:translateY(0);}50%{transform:translateY(-6px);} }
+@keyframes swing { 0%,100%{transform:rotate(0deg);}25%{transform:rotate(-4deg);}75%{transform:rotate(4deg);} }
+@keyframes pulse { 0%,100%{transform:scale(1);}50%{transform:scale(1.08);} }
+
+.feature-text {
+  font-size: 14px;
+  color: #222;
+  font-weight: 600;
+  line-height: 1.3;
+}
+/* 待上线灰色 */
+.wait { color: #999; font-size: 12px; }
+.footer {
+  margin-top: 40px;
+  padding-top: 20px;
+  border-top: 1px solid #eee;
+  color: #777;
+  font-size: 13px;
+}
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+  .container { padding: 30px 20px; }
+  .top-tip { font-size: 11px; padding: 3px 8px; }
+  h1 { font-size: 26px; }
+  .main-icon { font-size: 55px; }
+  .feature-item { width: 105px; padding: 18px 6px; }
+  .feature-icon { font-size: 28px; }
+  .features { gap: 12px; }
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+  <!-- 左上角提示 -->
+  <div class="top-tip">左上角导航栏查看更多功能</div>
+
+  <div class="main-icon">📦</div>
+  <h1>快递业务管理系统</h1>
+  <p class="subtitle">欢迎使用快递业务管理系统，点击下方功能卡片开始使用</p>
+  
+  <div class="features">
+    <div class="feature-item" onclick="loadPage('price_tekuai.html')">
+      <span class="feature-icon">⚡</span>
+      <span class="feature-text">特快报价<br><span class="wait">(待上线)</span></span>
+    </div>
+    <div class="feature-item" onclick="loadPage('price_kuaibao.html')">
+      <span class="feature-icon">📨</span>
+      <span class="feature-text">快包报价</span>
+    </div>
+    <div class="feature-item" onclick="loadPage('province_time.html')">
+      <span class="feature-icon">🗺️</span>
+      <span class="feature-text">时效查询<br><span class="wait">(待上线)</span></span>
+    </div>
+
+    <div class="feature-item" onclick="loadPage('barcode.html')">
+      <span class="feature-icon">📇</span>
+      <span class="feature-text">条码转换</span>
+    </div>
+
+    <div class="feature-item" onclick="loadPage('dedupe.html')">
+      <span class="feature-icon">🔍</span>
+      <span class="feature-text">单号去重</span>
+    </div>
+    <div class="feature-item" onclick="loadPage('barcode_scan.html')">
+      <span class="feature-icon">📷</span>
+      <span class="feature-text">扫码转单号</span>
+    </div>
+  </div>
+  
+  <div class="footer">
+    <p>版本 3.0.0 | 快递业务管理系统 © 安全稳定运行</p>
+  </div>
+</div>
+
+<script>
+// 页面跳转
+function loadPage(url) {
+  if (window.parent && window.parent !== window && window.parent.loadPage) {
+    window.parent.loadPage(url);
+  } else {
+    window.location.href = url;
+  }
+}
+
+// 点击微动效
+window.onload = function() {
+  const items = document.querySelectorAll('.feature-item');
+  items.forEach(item => {
+    item.addEventListener('click', function() {
+      this.style.transform = 'scale(0.96)';
+      setTimeout(() => {
+        this.style.transform = '';
+      }, 180);
+    });
+  });
+};
+</script>
+</body>
+</html>
